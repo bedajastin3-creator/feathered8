@@ -868,10 +868,12 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
     }
   };
 
-  const handleOpenDiscuss = (e?: React.MouseEvent) => {
+  const handleOpenDiscuss = (e?: React.MouseEvent | React.SyntheticEvent) => {
     e?.stopPropagation();
     if (onOpenComments) {
       onOpenComments(activePost);
+    } else if (onVideoClick) {
+      onVideoClick(activePost);
     } else {
       setShowDiscussModal(true);
       fetchVideoComments();
@@ -1238,122 +1240,125 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
         </div>
       </div>
 
-      {/* Reaction Summary & Counts Bar (Identical to Standard Posts) */}
-      {(reactionCount > 0 || commentsCount > 0 || sharesCount > 0) && (
-        <div className="px-3.5 pt-2.5 pb-1 flex items-center justify-between text-xs text-[#94A3B8] border-b border-[#1E293B]/50">
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenReactions) {
-                onOpenReactions(activePost);
-              } else {
-                setShowReactionsSheet(true);
-              }
-            }}
-            className="flex items-center gap-1.5 hover:underline text-left cursor-pointer group"
-          >
-            {reactionCount > 0 && (
-              <>
-                <span className="flex -space-x-1 items-center">
-                  {emojiList.map((emoji, idx) => (
-                    <span
-                      key={idx}
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-[11px] ring-1 ring-[#0F172A] bg-[#1E293B]"
-                    >
-                      {emoji}
-                    </span>
-                  ))}
-                </span>
-                <span className="font-medium text-[#CBD5E1] group-hover:text-[#F8FAFC]">
+      {/* 2. REACTION SUMMARY & DISCUSSION COUNTS LAYER (Configured like postcard) */}
+      <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+        <div className="flex items-center gap-2 min-h-[24px]">
+          {reactionCount > 0 && (
+            <div
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenReactions) {
+                  onOpenReactions(activePost);
+                } else {
+                  setShowReactionsSheet(true);
+                }
+              }}
+            >
+              <div className="flex -space-x-2">
+                {emojiList.slice(0, 2).map((emoji, idx) => (
+                  <span
+                    key={idx}
+                    className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-[#0B1120] flex items-center justify-center text-[16px]"
+                    style={{ zIndex: 10 - idx }}
+                  >
+                    {emoji}
+                  </span>
+                ))}
+              </div>
+
+              {reactionText && (
+                <span className="text-[15px] md:text-[16px] text-[#F8FAFC] font-bold">
                   {reactionText}
                 </span>
-              </>
-            )}
-          </button>
-
-          <div className="flex items-center gap-3 font-medium">
-            {commentsCount > 0 && (
-              <button
-                type="button"
-                onClick={handleOpenDiscuss}
-                className="hover:underline hover:text-[#CBD5E1]"
-              >
-                {formatCount(commentsCount)} {commentsCount === 1 ? 'Discussion' : 'Discussions'}
-              </button>
-            )}
-            {sharesCount > 0 && (
-              <span>
-                {formatCount(sharesCount)} {sharesCount === 1 ? 'Share' : 'Shares'}
-              </span>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+        <div className="flex items-center gap-4">
+          <span
+            className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
+            onClick={handleOpenDiscuss}
+          >
+            {formatCount(commentsCount)} {commentsCount === 1 ? 'Discussion' : 'Discussions'}
+          </span>
+          {sharesCount > 0 && (
+            <span
+              className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors"
+              onClick={handleShare}
+            >
+              {formatCount(sharesCount)} {sharesCount === 1 ? 'Share' : 'Shares'}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* 3. ACTION BAR (React with ReactionButton dock, Discuss, Share, Save) */}
-      <div className="px-3.5 pt-2 pb-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* 1. React Button with Animated Dock */}
-            <ReactionButton
-              currentUserReactions={myReaction}
-              reactionCount={reactionCount}
-              onReact={handleReact}
-              isGuest={!currentUser}
-              postId={activePostId}
-            />
+      <div className="px-3.5 py-2.5 border-t border-[#1E293B] flex items-center justify-between">
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* 1. React Button with Animated Dock */}
+          <ReactionButton
+            currentUserReactions={myReaction}
+            reactionCount={reactionCount}
+            onReact={handleReact}
+            isGuest={!currentUser}
+            postId={activePostId}
+          />
 
-            {/* 2. Discuss / Comment */}
-            <button
-              type="button"
-              onClick={handleOpenDiscuss}
-              className="flex items-center gap-1.5 text-[#F8FAFC] hover:text-[#38BDF8] transition-colors focus:outline-none p-1.5 rounded-lg hover:bg-[#1E293B]/60"
-              aria-label="Discuss & Comments"
-              title="Discuss"
-            >
-              <i className="far fa-comment text-[20px]"></i>
-              {commentsCount > 0 && (
-                <span className="text-[14px] font-semibold text-[#F8FAFC]">
-                  {formatCount(commentsCount)}
-                </span>
-              )}
-            </button>
-
-            {/* 3. Share */}
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex items-center gap-1.5 text-[#F8FAFC] hover:text-[#38BDF8] transition-transform active:scale-110 focus:outline-none p-1.5 rounded-lg hover:bg-[#1E293B]/60"
-              aria-label="Share reel"
-              title="Share"
-            >
-              <i className="far fa-paper-plane text-[19px]"></i>
-              {sharesCount > 0 && (
-                <span className="text-[14px] font-semibold text-[#F8FAFC]">
-                  {formatCount(sharesCount)}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Bookmark / Save */}
+          {/* 2. Discuss / Comment */}
           <button
-            onClick={() => toggleSavePost(activePost, true)}
-            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[#1E293B]/60 transition-transform active:scale-110 focus:outline-none"
-            aria-label={isSaved ? 'Remove from saved' : 'Save'}
-            title={isSaved ? 'Saved' : 'Save post'}
+            type="button"
+            onClick={handleOpenDiscuss}
+            className="flex items-center gap-1.5 text-[#F8FAFC] hover:text-[#38BDF8] transition-colors focus:outline-none p-1.5 rounded-lg hover:bg-[#1E293B]/60 cursor-pointer"
+            aria-label="Discuss & Comments"
+            title="Discuss"
           >
-            <i
-              className={`${
-                isSaved ? 'fas text-[#F59E0B]' : 'far text-[#F8FAFC] hover:text-[#F59E0B]'
-              } fa-bookmark text-[19px] transition-colors`}
-            ></i>
+            <i className="far fa-comment text-[20px]"></i>
+            {commentsCount > 0 && (
+              <span className="text-[14px] font-semibold text-[#F8FAFC]">
+                {formatCount(commentsCount)}
+              </span>
+            )}
+          </button>
+
+          {/* 3. Share */}
+          <button
+            type="button"
+            onClick={handleShare}
+            className="flex items-center gap-1.5 text-[#F8FAFC] hover:text-[#38BDF8] transition-transform active:scale-110 focus:outline-none p-1.5 rounded-lg hover:bg-[#1E293B]/60 cursor-pointer"
+            aria-label="Share reel"
+            title="Share"
+          >
+            <i className="far fa-paper-plane text-[19px]"></i>
+            {sharesCount > 0 && (
+              <span className="text-[14px] font-semibold text-[#F8FAFC]">
+                {formatCount(sharesCount)}
+              </span>
+            )}
           </button>
         </div>
 
+        {/* Bookmark / Save */}
+        <button
+          onClick={() => toggleSavePost(activePost, true)}
+          className="flex items-center justify-center p-1.5 rounded-lg hover:bg-[#1E293B]/60 transition-transform active:scale-110 focus:outline-none cursor-pointer"
+          aria-label={isSaved ? 'Remove from saved' : 'Save'}
+          title={isSaved ? 'Saved' : 'Save post'}
+        >
+          <i
+            className={`${
+              isSaved ? 'fas text-[#F59E0B]' : 'far text-[#F8FAFC] hover:text-[#F59E0B]'
+            } fa-bookmark text-[19px] transition-colors`}
+          ></i>
+        </button>
+      </div>
+
+      {/* Caption, View Discussions, and Outside Add Discussion Panel */}
+      <div className="px-3.5 pb-3">
         {/* Caption & Hashtags */}
         {activePost.content && (
-          <div className="mt-2 text-[15px] leading-snug">
+          <div className="text-[15px] leading-snug">
             <span
               className="font-bold text-[15px] text-[#F8FAFC] mr-1.5 cursor-pointer hover:underline"
               onClick={() => onProfileClick(authorId)}
@@ -1368,7 +1373,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
             {activePost.content.length > 110 && (
               <button
                 onClick={() => setIsCaptionExpanded(!isCaptionExpanded)}
-                className="text-[#94A3B8] hover:text-white text-xs ml-1 font-medium"
+                className="text-[#94A3B8] hover:text-white text-xs ml-1 font-medium cursor-pointer"
               >
                 {isCaptionExpanded ? 'less' : 'more'}
               </button>
@@ -1387,12 +1392,24 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
           </button>
         )}
 
-        {/* Inline Quick Comment Input Panel */}
-        <form onSubmit={handlePostComment} className="mt-2.5 pt-2 border-t border-[#1E293B]/70 flex items-center gap-2.5">
+        {/* Outside Add Discussion Panel: clicking opens comments / post preview modal */}
+        <div
+          onClick={handleOpenDiscuss}
+          className="mt-2.5 pt-2 border-t border-[#1E293B]/70 flex items-center gap-2.5 cursor-pointer group/adddisc"
+          role="button"
+          tabIndex={0}
+          aria-label="Add a discussion"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleOpenDiscuss();
+            }
+          }}
+        >
           <img
             src={resolvedCurrentUserAvatar}
             alt=""
-            className="w-7 h-7 rounded-full object-cover shrink-0"
+            className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-[#1E293B]"
             onError={(e) => {
               const target = e.currentTarget;
               const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || currentUser?.username || 'User')}&background=1877F2&color=fff&bold=true`;
@@ -1401,21 +1418,20 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
           />
           <input
             type="text"
+            readOnly
             placeholder="Add a discussion…"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            className="bg-transparent flex-1 text-[14px] text-[#F8FAFC] placeholder-[#64748B] outline-none"
+            onClick={handleOpenDiscuss}
+            className="bg-transparent flex-1 text-[14px] text-[#F8FAFC] placeholder-[#64748B] group-hover/adddisc:placeholder-[#94A3B8] outline-none cursor-pointer"
           />
-          {commentText.trim() && (
-            <button
-              type="submit"
-              disabled={isSubmittingComment}
-              className="text-[#1877F2] hover:text-[#38BDF8] text-[14px] font-bold transition-colors disabled:opacity-50"
-            >
-              {isSubmittingComment ? 'Posting...' : 'Post'}
-            </button>
-          )}
-        </form>
+          <button
+            type="button"
+            onClick={handleOpenDiscuss}
+            className="text-[#64748B] group-hover/adddisc:text-[#38BDF8] transition-colors p-1 cursor-pointer"
+            aria-label="Open discussion"
+          >
+            <i className="far fa-comment-dots text-[16px]" />
+          </button>
+        </div>
       </div>
 
       {/* Share Toast */}
