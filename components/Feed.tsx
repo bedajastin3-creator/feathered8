@@ -6600,6 +6600,7 @@ export const Post = memo(
               onHashtagClick={onHashtagClick}
               onOpenComments={() => onOpenComments(post)}
               onOpenReactions={() => handleOpenReactionsSheet()}
+              onCommentAdded={() => setCommentCount((c) => c + 1)}
             />
           </article>
         </div>

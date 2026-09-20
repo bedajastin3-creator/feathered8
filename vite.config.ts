@@ -415,6 +415,26 @@ function apiDevPlugin(): Plugin {
           return res.end(JSON.stringify({ success: true, comments: [] }));
         }
 
+        if (pathname.startsWith('/api/post-comments/')) {
+          res.statusCode = 200;
+          if (pathname.endsWith('/hide')) {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            return req.on('end', () => {
+              try {
+                const parsed = JSON.parse(body || '{}');
+                return res.end(JSON.stringify({ success: true, action: parsed.action || 'hide' }));
+              } catch {
+                return res.end(JSON.stringify({ success: true }));
+              }
+            });
+          }
+          if (pathname.endsWith('/delete') || req.method === 'DELETE') {
+            return res.end(JSON.stringify({ success: true }));
+          }
+          return res.end(JSON.stringify({ success: true }));
+        }
+
         if (pathname === '/api/reel-likes') {
           res.statusCode = 200;
           return res.end(JSON.stringify({ success: true, liked: true, count: 1 }));

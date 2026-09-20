@@ -70,6 +70,7 @@ interface InstagramVideoCardProps {
   onHashtagClick?: (tag: string) => void;
   onOpenComments?: (post: any) => void;
   onOpenReactions?: (post: any) => void;
+  onCommentAdded?: () => void;
 }
 
 interface ReelComment {
@@ -119,6 +120,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
   onHashtagClick,
   onOpenComments,
   onOpenReactions,
+  onCommentAdded,
 }) => {
   const [localPost, setLocalPost] = useState<any>(post || reel || {});
   const activePost = localPost;
@@ -804,6 +806,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
   const handleToggleHide = async (comment: any) => {
     if (!currentUser || !comment) return;
+    const userId = safeUserId(currentUser);
     const commentId = comment.id;
     const currentlyHidden = isCommentHidden(comment);
     const nextAction: 'hide' | 'unhide' = currentlyHidden ? 'unhide' : 'hide';
@@ -814,7 +817,8 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
           ? {
               ...c,
               is_hidden: !currentlyHidden,
-              hidden_by: !currentlyHidden ? currentUser.id : null,
+              hidden: !currentlyHidden,
+              hidden_by: !currentlyHidden ? userId : null,
               hidden_scope: !currentlyHidden ? 'user' : null,
             }
           : c
@@ -827,7 +831,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
       await apiFetch(`/api/post-comments/${commentId}/hide`, {
         method: 'POST',
         body: JSON.stringify({
-          user_id: currentUser.id,
+          user_id: userId,
           action: nextAction,
         }),
       });
@@ -840,14 +844,21 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
   const handleDeleteComment = async (comment: any) => {
     if (!currentUser || !comment) return;
+    const userId = safeUserId(currentUser);
     const commentId = comment.id;
 
     setComments((prev) => prev.filter((c) => c.id !== commentId));
     setCommentsCount((prev) => Math.max(0, prev - 1));
     showToast('Discussion deleted');
 
+    if (onCommentAdded) {
+      try {
+        onCommentAdded();
+      } catch {}
+    }
+
     try {
-      await apiFetch(`/api/post-comments/${commentId}/delete?user_id=${currentUser.id}`, {
+      await apiFetch(`/api/post-comments/${commentId}/delete?user_id=${userId}`, {
         method: 'DELETE',
       });
     } catch (err) {
@@ -878,10 +889,12 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
     setIsSubmittingComment(true);
 
+    const userId = safeUserId(currentUser);
+
     // Optimistic comment using resolved user profile picture
     const tempComment: ReelComment = {
       id: Date.now(),
-      user_id: currentUser.id,
+      user_id: userId,
       text,
       created_at: new Date().toISOString(),
       name: currentUser.name || currentUser.username || 'You',
@@ -894,13 +907,19 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
     setCommentsCount((prev) => prev + 1);
     setCommentText('');
 
+    if (onCommentAdded) {
+      try {
+        onCommentAdded();
+      } catch {}
+    }
+
     try {
       // Standard post comments endpoint: /api/posts/${postId}/comments
       const res = await apiFetch(`/api/posts/${activePostId}/comments`, {
         method: 'POST',
         body: JSON.stringify({
           post_id: activePostId,
-          user_id: currentUser.id,
+          user_id: userId,
           text,
         }),
       }).catch(async () => {
@@ -909,7 +928,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
           method: 'POST',
           body: JSON.stringify({
             post_id: activePostId,
-            user_id: currentUser.id,
+            user_id: userId,
             text,
           }),
         });
@@ -1357,91 +1376,15 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
           </div>
         )}
 
-        {/* View all discussions link */}
-        {commentsCount > 3 && (
+        {/* View all discussions link (Discussions only shown inside discussion modal) */}
+        {commentsCount > 0 && (
           <button
+            type="button"
             onClick={handleOpenDiscuss}
-            className="mt-2 text-[#94A3B8] hover:text-[#F8FAFC] text-[13px] font-medium block transition-colors"
+            className="mt-2 text-[#94A3B8] hover:text-[#F8FAFC] text-[13.5px] font-medium block transition-colors text-left cursor-pointer"
           >
-            View all {formatCount(commentsCount)} discussions
+            View all {formatCount(commentsCount)} {commentsCount === 1 ? 'discussion' : 'discussions'}
           </button>
-        )}
-
-        {/* Inline Discussions List */}
-        {comments.length > 0 && (
-          <div className="mt-2.5 space-y-2.5 border-t border-[#1E293B]/60 pt-2.5">
-            {comments.slice(0, 3).map((c: any, cIdx: number) => {
-              const cAuthorName = c.name || c.user?.name || c.username || c.user?.username || c.author_name || 'User';
-              const rawPic = c.profile_image_url || c.user?.profile_image_url || c.avatar || c.user?.avatar;
-              const cAvatar = (rawPic && typeof rawPic === 'string' && !rawPic.includes('ui-avatars.com'))
-                ? rawPic
-                : avatarFrom(c.user || { name: cAuthorName, profile_image_url: rawPic });
-              const cText = c.text || c.content || '';
-              const cTime = formatRelativeTime(c.created_at || c.createdAt);
-              const cIsVerified = Boolean(c.is_verified || c.user?.is_verified);
-              const isMine = currentUser && Number(c.user_id || c.user?.id) === Number(currentUser.id);
-
-              return (
-                <div key={c.id || `inline-comm-${cIdx}`} className="flex items-start gap-2.5 text-[13px] group/disc">
-                  <img
-                    src={cAvatar}
-                    alt=""
-                    className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(cAuthorName)}&background=1877F2&color=fff&bold=true`;
-                      if (target.src !== fallback) target.src = fallback;
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="bg-[#1E293B]/70 rounded-2xl px-3 py-1.5 inline-block max-w-full">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-[#F8FAFC] text-[13px] hover:underline cursor-pointer">
-                          {cAuthorName}
-                        </span>
-                        {cIsVerified && (
-                          <i className="fas fa-check-circle text-[11px] text-[#38BDF8]" />
-                        )}
-                        <span className="text-[#64748B] text-[11px] ml-1">{cTime}</span>
-                      </div>
-                      <p className="text-[#E2E8F0] text-[13px] leading-snug break-words whitespace-pre-wrap mt-0.5">
-                        {cText}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-1 ml-2 text-[11px] text-[#94A3B8]">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleLikeComment(c)}
-                        className={`hover:text-red-400 flex items-center gap-1 transition-colors ${c.liked_by_me ? 'text-red-500 font-semibold' : ''}`}
-                      >
-                        <i className={`${c.liked_by_me ? 'fas fa-heart text-red-500' : 'far fa-heart'}`} />
-                        <span>{c.likes_count > 0 ? c.likes_count : 'Like'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCommentText(`@${c.username || cAuthorName} `);
-                        }}
-                        className="hover:text-[#38BDF8] transition-colors"
-                      >
-                        Reply
-                      </button>
-                      {isMine && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteComment(c)}
-                          className="hover:text-red-400 opacity-0 group-hover/disc:opacity-100 transition-opacity"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         )}
 
         {/* Inline Quick Comment Input Panel */}
@@ -1544,30 +1487,37 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
                 </div>
               ) : (
                 comments.map((comment) => {
-                  const cAuthorName = comment.name || comment.user?.name || 'User';
-                  const cAuthorAvatar =
-                    comment.profile_image_url ||
-                    comment.user?.profile_image_url ||
-                    avatarFrom({ id: comment.user_id, name: cAuthorName });
+                  const cAuthorName = comment.name || comment.user?.name || comment.username || comment.user?.username || 'User';
+                  const rawPic = comment.profile_image_url || comment.user?.profile_image_url || comment.avatar || comment.user?.avatar;
+                  const cAuthorAvatar = (rawPic && typeof rawPic === 'string' && !rawPic.includes('ui-avatars.com'))
+                    ? rawPic
+                    : avatarFrom(comment.user || { id: comment.user_id, name: cAuthorName, profile_image_url: rawPic });
                   const isHidden = isCommentHidden(comment);
+                  const canHide = canHideComment(comment);
+                  const canDelete = canDeleteComment(comment);
 
                   return (
                     <div
                       key={comment.id}
-                      className={`pt-3 first:pt-0 flex items-start gap-3 group/comment ${
+                      className={`pt-3.5 first:pt-0 flex items-start gap-3 group/comment ${
                         isHidden ? 'opacity-65' : ''
                       }`}
                     >
                       <img
                         src={cAuthorAvatar}
                         alt={cAuthorName}
-                        className="w-8 h-8 rounded-full object-cover border border-[#1E293B]"
+                        className="w-8 h-8 rounded-full object-cover border border-[#1E293B] shrink-0"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(cAuthorName)}&background=1877F2&color=fff&bold=true`;
+                          if (target.src !== fallback) target.src = fallback;
+                        }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <span
-                              className="font-bold text-[21px] text-[#F8FAFC] hover:underline cursor-pointer"
+                              className="font-bold text-[14px] text-[#F8FAFC] hover:underline cursor-pointer"
                               onClick={() => {
                                 setShowDiscussModal(false);
                                 onProfileClick(comment.user_id);
@@ -1591,16 +1541,55 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
                                 e.stopPropagation();
                                 setActionModalComment(comment);
                               }}
-                              className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] rounded-full hover:bg-[#1E293B] transition-colors"
+                              className="p-1 text-[#94A3B8] hover:text-[#F8FAFC] rounded-full hover:bg-[#1E293B] transition-colors cursor-pointer"
                               title="Discussion options"
                             >
                               <i className="fas fa-ellipsis-h text-xs" />
                             </button>
                           </div>
                         </div>
-                        <p className="text-[20.5px] leading-[1.38] text-[#CBD5E1] mt-0.5 break-words">
+                        <p className="text-[13.5px] leading-relaxed text-[#CBD5E1] mt-0.5 break-words whitespace-pre-wrap">
                           {renderFormattedText(comment.text)}
                         </p>
+
+                        <div className="flex items-center gap-3.5 mt-1 text-[11.5px] text-[#94A3B8]">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleLikeComment(comment)}
+                            className={`hover:text-red-400 flex items-center gap-1 transition-colors cursor-pointer ${comment.liked_by_me ? 'text-red-500 font-semibold' : ''}`}
+                          >
+                            <i className={`${comment.liked_by_me ? 'fas fa-heart text-red-500' : 'far fa-heart'}`} />
+                            <span>{comment.likes_count > 0 ? comment.likes_count : 'Like'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const authorTag = comment.username || cAuthorName;
+                              setCommentText(`@${authorTag} `);
+                            }}
+                            className="hover:text-[#38BDF8] transition-colors cursor-pointer"
+                          >
+                            Reply
+                          </button>
+                          {canHide && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleHide(comment)}
+                              className="hover:text-amber-400 transition-colors cursor-pointer"
+                            >
+                              {isHidden ? 'Unhide' : 'Hide'}
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(comment)}
+                              className="hover:text-red-400 transition-colors cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
