@@ -341,9 +341,9 @@ const GalleryViewer: React.FC<{
               </span>
             )}
           </div>
-          <div className="flex gap-3">
-            <span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors" onClick={onOpenComments}>{formatCount(commentCount)} Discussions</span>
-            {shareCount > 0 && (<span className="hover:underline cursor-pointer" onClick={onShare}>{formatCount(shareCount)} Shares</span>)}
+          <div className="flex items-center gap-3">
+            <span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors" onClick={onOpenComments}>{formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}</span>
+            {shareCount > 0 && (<span className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors" onClick={onShare}>{formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}</span>)}
           </div>
         </div>
         <div className="flex items-center justify-between">
@@ -859,11 +859,19 @@ const RecruitmentPost: React.FC<any> = (props) => {
           </div>
         </div>
         {(localReactionCount > 0 || commentCount > 0) && (
-          <div className="px-3 md:px-4 py-2 flex items-center justify-between text-[#94A3B8] text-[14px] border-t border-[#1E293B]">
-            <button onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              {localReactionCount > 0 && (<><div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[22px] h-[22px] rounded-full bg-[#1E293B] border border-[#0F172A] flex items-center justify-center text-[14px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div><span className="text-[#F8FAFC] font-bold text-[16px]">{formatCount(localReactionCount)}</span></>)}
-            </button>
-            <div className="flex gap-4"><span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} Discussions</span>{shareCount > 0 && (<span className="hover:underline cursor-pointer" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} Shares</span>)}</div>
+          <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+            <div className="flex items-center gap-2 min-h-[24px]">
+              {localReactionCount > 0 && (
+                <div onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                  <div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-[#0B1120] flex items-center justify-center text-[16px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div>
+                  <span className="text-[#F8FAFC] font-bold text-[15px] md:text-[16px]">{localReactionCount === 1 ? '1 Reaction' : `${formatCount(localReactionCount)} Reactions`}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}</span>
+              {shareCount > 0 && (<span className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}</span>)}
+            </div>
           </div>
         )}
         <div className="px-3.5 py-2.5 border-t border-[#1E293B] flex items-center justify-between">
@@ -1001,11 +1009,19 @@ const BuySellPost: React.FC<any> = (props) => {
         {videoMedia.length > 0 && (<div className="px-3 md:px-4 mb-3"><video src={videoMedia[0].url} className="w-full rounded-lg" controls playsInline /></div>)}
         {post.content && (<div className="px-3 md:px-4 py-3"><p className="text-[#F8FAFC] text-base whitespace-pre-wrap">{post.content}</p></div>)}
         {(localReactionCount > 0 || commentCount > 0) && (
-          <div className="px-3 md:px-4 py-2 flex items-center justify-between text-[#94A3B8] text-[14px] border-t border-[#1E293B]">
-            <button onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              {localReactionCount > 0 && (<><div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[22px] h-[22px] rounded-full bg-[#1E293B] border border-[#0F172A] flex items-center justify-center text-[14px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div><span className="text-[#F8FAFC] font-bold text-[16px]">{formatCount(localReactionCount)}</span></>)}
-            </button>
-            <div className="flex gap-4"><span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} Discussions</span>{shareCount > 0 && (<span className="hover:underline cursor-pointer" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} Shares</span>)}</div>
+          <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+            <div className="flex items-center gap-2 min-h-[24px]">
+              {localReactionCount > 0 && (
+                <div onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                  <div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-[#0B1120] flex items-center justify-center text-[16px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div>
+                  <span className="text-[#F8FAFC] font-bold text-[15px] md:text-[16px]">{localReactionCount === 1 ? '1 Reaction' : `${formatCount(localReactionCount)} Reactions`}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}</span>
+              {shareCount > 0 && (<span className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}</span>)}
+            </div>
           </div>
         )}
         <div className="px-3.5 py-2.5 border-t border-[#1E293B] flex items-center justify-between">
@@ -1142,11 +1158,19 @@ const GeneralGroupPost: React.FC<any> = ({
         {imageMedia.length > 0 && (<MediaGrid media={imageMedia} onOpen={(url, index) => { const urls = imageMedia.map(m => m.full || m.feed || m.url); openGallery(urls, index); }} />)}
         {videoMedia.length > 0 && (<div className="cursor-pointer relative h-[500px] bg-black" onClick={() => onVideoClick?.(post)}><video src={videoMedia[0].url} className="w-full h-full object-cover" preload="metadata" playsInline muted onError={(e) => { console.error('Failed to load video:', videoMedia[0].url); e.currentTarget.style.display = 'none'; }} /><div className="absolute inset-0 flex items-center justify-center"><i className="fas fa-play text-white text-4xl opacity-50"></i></div></div>)}
         {(finalReactionCount > 0 || commentCount > 0) && (
-          <div className="px-3 md:px-4 py-2 flex items-center justify-between text-[#94A3B8] text-[14px] border-t border-[#1E293B]">
-            <button onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              {finalReactionCount > 0 && (<><div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[22px] h-[22px] rounded-full bg-[#1E293B] border border-[#0F172A] flex items-center justify-center text-[14px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div><span className="text-[#F8FAFC] font-bold text-[16px]">{formatCount(finalReactionCount)}</span></>)}
-            </button>
-            <div className="flex gap-4"><span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} Discussions</span>{shareCount > 0 && (<span className="hover:underline cursor-pointer" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} Shares</span>)}</div>
+          <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+            <div className="flex items-center gap-2 min-h-[24px]">
+              {finalReactionCount > 0 && (
+                <div onClick={(e) => { e.stopPropagation(); setShowReactionsSheet(true); }} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                  <div className="flex -space-x-2">{emojiList.slice(0, 2).map((e, i) => (<span key={i} className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-[#0B1120] flex items-center justify-center text-[16px]" style={{ zIndex: 10 - i }}>{e}</span>))}</div>
+                  <span className="text-[#F8FAFC] font-bold text-[15px] md:text-[16px]">{finalReactionCount === 1 ? '1 Reaction' : `${formatCount(finalReactionCount)} Reactions`}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors" onClick={handleOpenComments}>{formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}</span>
+              {shareCount > 0 && (<span className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors" onClick={() => setShowShareSheet(true)}>{formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}</span>)}
+            </div>
           </div>
         )}
         <div className="px-3.5 py-2.5 border-t border-[#1E293B] flex items-center justify-between">

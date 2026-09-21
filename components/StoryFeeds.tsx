@@ -1052,10 +1052,10 @@ function StoryFeedCard({
         <div className="flex items-center gap-4">
           <button
             type="button"
-            className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors"
+            className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
             onClick={() => onComment?.(story.id)}
           >
-            {commentsCount} Discussions
+            {commentsCount} {commentsCount === 1 ? 'Discussion' : 'Discussions'}
           </button>
         </div>
       </div>

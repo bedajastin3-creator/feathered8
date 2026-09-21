@@ -1782,10 +1782,10 @@ export const GalleryViewer = memo(
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between text-[#94A3B8] text-[15px] mb-2 px-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-h-[24px]">
               {reactionCount > 0 && (
-                <span
-                  className="text-[#F8FAFC] font-bold cursor-pointer hover:underline flex items-center gap-2 text-[15px]"
+                <div
+                  className="text-[#F8FAFC] font-bold cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2 text-[15px] md:text-[16px]"
                   onClick={onOpenReactions}
                 >
                   <div className="flex -space-x-2">
@@ -1795,29 +1795,32 @@ export const GalleryViewer = memo(
                       .map((t, i) => (
                         <span
                           key={i}
-                          className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-black flex items-center justify-center text-[16px]"
+                          className="w-[24px] h-[24px] rounded-full bg-[#1E293B] border border-[#0B1120] flex items-center justify-center text-[16px]"
+                          style={{ zIndex: 10 - i }}
                         >
                           {reactionEmoji(t as string)}
                         </span>
                       ))}
                   </div>
-                  {fmtCount(reactionCount)}
-                </span>
+                  <span>
+                    {reactionCount === 1 ? '1 Reaction' : `${fmtCount(reactionCount)} Reactions`}
+                  </span>
+                </div>
               )}
             </div>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
               <span
-                className="hover:underline cursor-pointer text-[15px] text-[#CBD5E1]"
+                className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
                 onClick={onOpenComments}
               >
-                {formatCount(commentCount)} Discussions
+                {formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}
               </span>
               {shareCount > 0 && (
                 <span
-                  className="hover:underline cursor-pointer text-[15px] text-[#CBD5E1]"
+                  className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors"
                   onClick={onShare}
                 >
-                  {formatCount(shareCount)} Shares
+                  {formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}
                 </span>
               )}
             </div>
@@ -5224,8 +5227,8 @@ export const EventPost = memo(
               </div>
             </div>
 
-            <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[16px] border-t border-[#1E293B]">
-              <div className="flex items-center gap-2">
+            <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+              <div className="flex items-center gap-2 min-h-[24px]">
                 {finalReactionCount > 0 && (
                   <div
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -5247,7 +5250,7 @@ export const EventPost = memo(
                     </div>
 
                     {reactionText && (
-                      <span className="text-[17px] text-[#F8FAFC] font-bold">
+                      <span className="text-[15px] md:text-[16px] text-[#F8FAFC] font-bold">
                         {reactionText}
                       </span>
                     )}
@@ -5255,25 +5258,25 @@ export const EventPost = memo(
                 )}
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex items-center gap-4">
                 <span
-                  className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors"
+                  className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOpenComments();
                   }}
                 >
-                  {fmtCount(commentCount)} Discussions
+                  {fmtCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}
                 </span>
                 {shareCount > 0 && (
                   <span
-                    className="hover:underline cursor-pointer text-[#94A3B8] text-[16px] font-medium"
+                    className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShare();
                     }}
                   >
-                    {fmtCount(shareCount)} Shares
+                    {fmtCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}
                   </span>
                 )}
               </div>
@@ -7017,8 +7020,8 @@ export const Post = memo(
                   </div>
                 )}
 
-                <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[16px] border-t border-[#1E293B]">
-                  <div className="flex items-center gap-2">
+                <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+                  <div className="flex items-center gap-2 min-h-[24px]">
                     {finalReactionCount > 0 && (
                       <div
                         className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -7040,7 +7043,7 @@ export const Post = memo(
                         </div>
 
                         {reactionText && (
-                          <span className="text-[17px] text-[#F8FAFC] font-bold">
+                          <span className="text-[15px] md:text-[16px] text-[#F8FAFC] font-bold">
                             {reactionText}
                           </span>
                         )}
@@ -7048,22 +7051,32 @@ export const Post = memo(
                     )}
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex items-center gap-4">
                     <span
-                      className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors"
+                      className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
                       onClick={() => handleOpenComments()}
                     >
-                      {formatCount(commentCount)} Discussions
+                      {formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}
                     </span>
                     {shareCount > 0 && (
-                      <span className="hover:underline text-[16px]">
-                        {formatCount(shareCount)} Shares
+                      <span
+                        className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!currentUser) {
+                            alert('Please login to share posts.');
+                            return;
+                          }
+                          setShowShareSheet(true);
+                        }}
+                      >
+                        {formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="px-3.5 py-2.5 border-t border-white/10 flex items-center justify-between">
+                <div className="px-3.5 py-2.5 border-t border-[#1E293B] flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <ReactionButton
                       currentUserReactions={finalMyReaction || undefined}
@@ -7283,8 +7296,8 @@ export const Post = memo(
                   </div>
                 )}
 
-                <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[16px] border-t border-[#1E293B]">
-                  <div className="flex items-center gap-2">
+                <div className="px-3 md:px-4 py-2.5 flex items-center justify-between text-[#94A3B8] text-[15px] border-t border-[#1E293B]">
+                  <div className="flex items-center gap-2 min-h-[24px]">
                     {finalReactionCount > 0 && (
                       <div
                         className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -7306,7 +7319,7 @@ export const Post = memo(
                         </div>
 
                         {reactionText && (
-                          <span className="text-[17px] text-[#F8FAFC] font-bold">
+                          <span className="text-[15px] md:text-[16px] text-[#F8FAFC] font-bold">
                             {reactionText}
                           </span>
                         )}
@@ -7314,16 +7327,26 @@ export const Post = memo(
                     )}
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex items-center gap-4">
                     <span
-                      className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[20.5px] font-semibold transition-colors"
+                      className="hover:underline cursor-pointer text-[#CBD5E1] hover:text-[#F8FAFC] text-[15px] md:text-[16px] font-semibold transition-colors"
                       onClick={() => handleOpenComments()}
                     >
-                      {formatCount(commentCount)} Discussions
+                      {formatCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}
                     </span>
                     {shareCount > 0 && (
-                      <span className="hover:underline text-[16px]">
-                        {formatCount(shareCount)} Shares
+                      <span
+                        className="hover:underline cursor-pointer text-[15px] md:text-[16px] text-[#94A3B8] hover:text-[#CBD5E1] transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!currentUser) {
+                            alert('Please login to share posts.');
+                            return;
+                          }
+                          setShowShareSheet(true);
+                        }}
+                      >
+                        {formatCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}
                       </span>
                     )}
                   </div>

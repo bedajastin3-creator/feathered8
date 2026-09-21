@@ -2374,11 +2374,11 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({
               </div>
               <div className="flex gap-3 text-white/60 text-[13px]">
                 <span className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); handleComment(); }}>
-                  {fmtCount(commentCount)} Discussions
+                  {fmtCount(commentCount)} {commentCount === 1 ? 'Discussion' : 'Discussions'}
                 </span>
                 {shareCount > 0 && (
                   <span className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); handleShare(); }}>
-                    {fmtCount(shareCount)} Shares
+                    {fmtCount(shareCount)} {shareCount === 1 ? 'Share' : 'Shares'}
                   </span>
                 )}
               </div>
