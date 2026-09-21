@@ -10191,6 +10191,8 @@ const createComment = useCallback(async (
         if (!isMatch) return post;
         
         const existingComments = safeArray((post as any).comments);
+        const alreadyExists = existingComments.some((c: any) => String(c?.id) === String(newComment.id));
+        if (alreadyExists) return post;
         const nextCount = safeNumber((post as any).comments_count) + 1;
         return {
           ...post,
@@ -10211,6 +10213,8 @@ const createComment = useCallback(async (
       setCommentPostSnapshot(prev => {
         if (!prev) return prev;
         const existingComments = safeArray((prev as any).comments);
+        const alreadyExists = existingComments.some((c: any) => String(c?.id) === String(newComment.id));
+        if (alreadyExists) return prev;
         return {
           ...prev,
           comments: [newComment, ...existingComments],
@@ -10497,8 +10501,10 @@ const refreshComments = useCallback(async (item: any) => {
 // ============================================================================
 // ✅ ORIGINAL FUNCTIONS (Preserved)
 // ============================================================================
-const onReactPost = useCallback((postId: number, type: ReactionType) => {
-  const post = posts.find(p => p.id === postId) || profilePosts.find(p => p.id === postId);
+const onReactPost = useCallback((postOrId: any, type: ReactionType) => {
+  const post = typeof postOrId === 'object' && postOrId !== null
+    ? postOrId
+    : (posts.find(p => Number(p.id) === Number(postOrId)) || profilePosts.find(p => Number(p.id) === Number(postOrId)));
   if (post) {
     reactToFeedItem(post, type);
   }
@@ -11605,8 +11611,8 @@ return (
               reels={reels}
               onProfileClick={(id) => openProfile(id)}
               onFollow={(id: number) => followUser(id)}
-              onReact={(postId: number, type: ReactionType) => onReactPost(postId, type)}
-              onComment={() => requireAuth('Commenting')}
+              onReact={(postOrId: any, type: ReactionType) => onReactPost(postOrId, type)}
+              onComment={createComment}
               onShare={(post: any) => handleOpenShareSheet(post)}
               onMessage={(id) => {
                 if (!requireAuth('Messaging')) return;

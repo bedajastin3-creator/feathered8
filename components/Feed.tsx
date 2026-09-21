@@ -9110,7 +9110,25 @@ export const CommentsSheet = memo(
       const arr = Array.isArray(data) ? data : data?.comments || [];
 
       if (arr.length > 0) {
-        setComments(arr);
+        setComments((prev) => {
+          // Keep pending optimistic comments that haven't landed on server yet
+          const pending = prev.filter(
+            (c) =>
+              String(c.id).startsWith('tmp-') &&
+              !arr.some(
+                (s: any) =>
+                  s.text === c.text && Number(s.user_id) === Number(c.user_id)
+              )
+          );
+          const combined = [...arr, ...pending];
+          const seen = new Set<string>();
+          return combined.filter((c) => {
+            const key = String(c.id);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        });
         setCachedComments(itemType, postId, arr);
       }
     } catch (error: any) {
@@ -9131,8 +9149,15 @@ export const CommentsSheet = memo(
 
       const postComments = Array.isArray(p.comments) ? p.comments : [];
       if (postComments.length > 0 && (!cached || postComments.length > cached.data.length)) {
-        setComments(postComments);
-        setCachedComments(itemType, postId, postComments);
+        const seen = new Set<string>();
+        const unique = postComments.filter((c: any) => {
+          const key = String(c?.id || '');
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setComments(unique);
+        setCachedComments(itemType, postId, unique);
       }
 
       // Only fetch if stale (> 5 mins) or no cache
@@ -9175,7 +9200,17 @@ export const CommentsSheet = memo(
 
   const buildThreads = (list: any[]) => {
     const commentMap = new Map<string, any>();
-    list.forEach((c) => commentMap.set(idKey(c.id), c));
+    const seen = new Set<string>();
+    const uniqueList: any[] = [];
+
+    (list || []).forEach((c) => {
+      if (!c) return;
+      const key = idKey(c.id);
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      uniqueList.push(c);
+      commentMap.set(key, c);
+    });
 
     const findRootId = (c: any): string => {
       let curr = c;
@@ -9195,7 +9230,7 @@ export const CommentsSheet = memo(
     const roots: any[] = [];
     const repliesByRoot = new Map<string, any[]>();
 
-    list.forEach((c) => {
+    uniqueList.forEach((c) => {
       if (!c.parent_comment_id) {
         roots.push(c);
       } else {
@@ -9304,35 +9339,36 @@ export const CommentsSheet = memo(
       toggleThread(rootId, true);
     }
 
-    if (onComment) {
-      onComment(post || postId, finalText, parentCommentId, selectedImage || undefined);
-    }
-
-    // Actual API call
+    // Actual API call: If onComment is provided, it handles the backend insertion and state sync.
+    // Otherwise fallback to direct endpoint POST.
     try {
-      let endpoint = '';
-      let body: any = {
-        text: finalText,
-        user_id: safeUserId(currentUser),
-        parent_comment_id: parentCommentId,
-        post_id: postId,
-        comment_id: replyTo?.id,
-      };
-      
-      if (uploadedImageUrl) {
-        body.image_url = uploadedImageUrl;
-      }
-
-      if (replyTo) {
-        endpoint = getReplyEndpoint(replyTo.id);
+      if (onComment) {
+        await onComment(post || postId, finalText, parentCommentId, selectedImage || undefined);
       } else {
-        endpoint = getAddCommentEndpoint();
-      }
+        let endpoint = '';
+        let body: any = {
+          text: finalText,
+          user_id: safeUserId(currentUser),
+          parent_comment_id: parentCommentId,
+          post_id: postId,
+          comment_id: replyTo?.id,
+        };
+        
+        if (uploadedImageUrl) {
+          body.image_url = uploadedImageUrl;
+        }
 
-      await apiFetch(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+        if (replyTo) {
+          endpoint = getReplyEndpoint(replyTo.id);
+        } else {
+          endpoint = getAddCommentEndpoint();
+        }
+
+        await apiFetch(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+      }
 
       if (onCommentAdded) {
         onCommentAdded();
