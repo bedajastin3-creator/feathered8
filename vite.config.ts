@@ -432,6 +432,9 @@ function apiDevPlugin(): Plugin {
           if (pathname.endsWith('/delete') || req.method === 'DELETE') {
             return res.end(JSON.stringify({ success: true }));
           }
+          if (pathname.endsWith('/like')) {
+            return res.end(JSON.stringify({ success: true, liked_by_me: true, likes_count: 1 }));
+          }
           return res.end(JSON.stringify({ success: true }));
         }
 

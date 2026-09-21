@@ -388,6 +388,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [replyToComment, setReplyToComment] = useState<any | null>(null);
 
   // Sync comments if activePost.comments updates
   useEffect(() => {
@@ -705,27 +706,52 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
     }
   };
 
-  // Toggle like on individual discussion comment
-  const handleToggleLikeComment = (comment: any) => {
+  // Toggle like on individual discussion comment: POST /api/post-comments/${commentId}/like
+  const handleToggleLikeComment = async (comment: any) => {
     if (!currentUser) {
       alert('Please log in to like discussions.');
       return;
     }
     const commentId = comment.id;
+    const currentlyLiked = Boolean(comment.liked_by_me);
+    const currentCount = Number(comment.likes_count || 0);
+
     setComments((prev) =>
       prev.map((c) => {
         if (c.id === commentId) {
-          const liked = Boolean(c.liked_by_me);
-          const currentCount = Number(c.likes_count || 0);
           return {
             ...c,
-            liked_by_me: !liked,
-            likes_count: liked ? Math.max(0, currentCount - 1) : currentCount + 1,
+            liked_by_me: !currentlyLiked,
+            likes_count: currentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
           };
         }
         return c;
       })
     );
+
+    try {
+      await apiFetch(`/api/post-comments/${commentId}/like`, {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: safeUserId(currentUser),
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to like comment:', err);
+      // Revert optimistic update
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              liked_by_me: currentlyLiked,
+              likes_count: currentCount,
+            };
+          }
+          return c;
+        })
+      );
+    }
   };
 
   // ==========================================
@@ -916,25 +942,22 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
     }
 
     try {
-      // Standard post comments endpoint: /api/posts/${postId}/comments
+      // Standard post comments endpoint: POST /api/posts/${postId}/comments
+      // body: { user_id, text, image_url?, parent_comment_id? }
+      const payload: any = {
+        user_id: userId,
+        text,
+      };
+      if (replyToComment?.id) {
+        payload.parent_comment_id = replyToComment.id;
+      }
+
       const res = await apiFetch(`/api/posts/${activePostId}/comments`, {
         method: 'POST',
-        body: JSON.stringify({
-          post_id: activePostId,
-          user_id: userId,
-          text,
-        }),
-      }).catch(async () => {
-        // Fallback to /api/posts/${postId}/comment
-        return await apiFetch(`/api/posts/${activePostId}/comment`, {
-          method: 'POST',
-          body: JSON.stringify({
-            post_id: activePostId,
-            user_id: userId,
-            text,
-          }),
-        });
+        body: JSON.stringify(payload),
       });
+
+      setReplyToComment(null);
 
       if (res?.comment?.id || res?.id) {
         const serverComment = res?.comment || res;
@@ -1580,6 +1603,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
                           <button
                             type="button"
                             onClick={() => {
+                              setReplyToComment(comment);
                               const authorTag = comment.username || cAuthorName;
                               setCommentText(`@${authorTag} `);
                             }}
@@ -1626,6 +1650,23 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
                 </button>
               ))}
             </div>
+
+            {/* Replying Banner */}
+            {replyToComment && (
+              <div className="flex items-center justify-between px-4 py-1.5 bg-[#0F172A] border-t border-[#1E293B] text-xs text-[#94A3B8]">
+                <span>Replying to <strong className="text-white">@{replyToComment.username || 'user'}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyToComment(null);
+                    setCommentText('');
+                  }}
+                  className="text-[#94A3B8] hover:text-white ml-2"
+                >
+                  <i className="fas fa-times" />
+                </button>
+              </div>
+            )}
 
             {/* Comment Form */}
             <form

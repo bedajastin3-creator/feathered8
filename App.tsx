@@ -8264,7 +8264,7 @@ const declineGroupInvite = useCallback(async (inviteId: number) => {
     if (!currentUser) return;
 
     try {
-      return await apiFetch(`/api/comments/${commentId}/like`, {
+      return await apiFetch(`/api/post-comments/${commentId}/like`, {
         method: 'POST',
         body: JSON.stringify({ user_id: currentUser.id }),
       });
@@ -10060,7 +10060,7 @@ const createComment = useCallback(async (
         };
         break;
       case 'reel':
-        endpoint = `/api/posts/${id}/comment`;
+        endpoint = `/api/posts/${id}/comments`;
         payload = {
           user_id: currentUser.id,
           text: text || '',
@@ -10069,7 +10069,7 @@ const createComment = useCallback(async (
         };
         break;
       default:
-        endpoint = `/api/posts/${id}/comment`;
+        endpoint = `/api/posts/${id}/comments`;
         payload = {
           user_id: currentUser.id,
           text: text || '',
@@ -10250,9 +10250,8 @@ const deleteComment = useCallback(async (commentId: number) => {
   if (!currentUser) return false;
 
   try {
-    await apiFetch(`/api/comments/${commentId}`, {
+    await apiFetch(`/api/post-comments/${commentId}/delete?user_id=${currentUser.id}`, {
       method: 'DELETE',
-      body: JSON.stringify({ user_id: currentUser.id }),
     });
 
     const removeCommentFromPosts = (postsList: any[]) => {
@@ -10354,7 +10353,7 @@ const likeComment = useCallback(async (commentId: number) => {
   }
 
   try {
-    const data = await apiFetch(`/api/comments/${commentId}/like`, {
+    const data = await apiFetch(`/api/post-comments/${commentId}/like`, {
       method: 'POST',
       body: JSON.stringify({ user_id: currentUser.id }),
     });

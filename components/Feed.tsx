@@ -1363,14 +1363,10 @@ const getCommentLikeEndpoint = (itemType: string, commentId: number): string => 
     case 'product':
       return `/api/product-reviews/${commentId}/like`;
     case 'reel':
-      return `/api/reel-comments/${commentId}/like`;
-    case 'song':
-    case 'music':
-      return `/api/song-comments/${commentId}/like`;
-    case 'podcast':
-      return `/api/podcast-comments/${commentId}/like`;
+    case 'video':
+    case 'post':
     default:
-      return `/api/comments/${commentId}/like`;
+      return `/api/post-comments/${commentId}/like`;
   }
 };
 
@@ -8553,17 +8549,12 @@ export const CommentsSheet = memo(
         const productId = p.product_id || p.id;
         return `/api/products/${productId}/reviews?viewerId=${viewerId}`;
       case 'reel':
-        const reelId = p.reel_id || p.id;
-        return `/api/reels/${reelId}/comments?viewerId=${viewerId}`;
-      case 'song':
-      case 'music':
-        const songId = p.song_id2 || p.song_id || p.id;
-        return `/api/songs/${songId}/comments?viewerId=${viewerId}`;
-      case 'podcast':
-        const podcastId = p.podcast_id || p.id;
-        return `/api/podcasts/${podcastId}/comments?viewerId=${viewerId}`;
-      default:
-        return `/api/posts/${p.id}/comments?viewerId=${viewerId}`;
+      case 'video':
+      case 'post':
+      default: {
+        const id = p.reel_id || p.id;
+        return `/api/posts/${id}/comments?viewerId=${viewerId}`;
+      }
     }
   };
 
@@ -8581,17 +8572,12 @@ export const CommentsSheet = memo(
         const productId = p.product_id || p.id;
         return `/api/products/${productId}/review`;
       case 'reel':
-        const reelId = p.reel_id || p.id;
-        return `/api/reels/${reelId}/comment`;
-      case 'song':
-      case 'music':
-        const songId = p.song_id2 || p.song_id || p.id;
-        return `/api/songs/${songId}/comment`;
-      case 'podcast':
-        const podcastId = p.podcast_id || p.id;
-        return `/api/podcasts/${podcastId}/comment`;
-      default:
-        return `/api/posts/${p.id}/comment`;
+      case 'video':
+      case 'post':
+      default: {
+        const id = p.reel_id || p.id;
+        return `/api/posts/${id}/comments`;
+      }
     }
   };
 
@@ -8607,14 +8593,12 @@ export const CommentsSheet = memo(
       case 'product':
         return `/api/product-reviews/${commentId}/reply`;
       case 'reel':
-        return `/api/reel-comments/${commentId}/reply`;
-      case 'song':
-      case 'music':
-        return `/api/song-comments/${commentId}/reply`;
-      case 'podcast':
-        return `/api/podcast-comments/${commentId}/reply`;
-      default:
-        return `/api/comments/${commentId}/reply`;
+      case 'video':
+      case 'post':
+      default: {
+        const id = p.reel_id || p.id;
+        return `/api/posts/${id}/comments`;
+      }
     }
   };
 
@@ -8630,14 +8614,10 @@ export const CommentsSheet = memo(
       case 'product':
         return `/api/product-reviews/${commentId}/like`;
       case 'reel':
-        return `/api/reel-comments/${commentId}/like`;
-      case 'song':
-      case 'music':
-        return `/api/song-comments/${commentId}/like`;
-      case 'podcast':
-        return `/api/podcast-comments/${commentId}/like`;
+      case 'video':
+      case 'post':
       default:
-        return `/api/comments/${commentId}/like`;
+        return `/api/post-comments/${commentId}/like`;
     }
   };
 
