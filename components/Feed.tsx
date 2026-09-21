@@ -372,7 +372,18 @@ const isUneraNativeApp = (): boolean => {
 };
 
 // ====== FEEDS ARRANGEMENTS HELPERS =====
-const safeArray = <T,>(v: any): T[] => (Array.isArray(v) ? v : []);
+const safeArray = <T,>(v: any): T[] => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string' && v.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 const safeNumber = (v: any, fallback = 0) => {
   const n = typeof v === 'number' ? v : Number(v);
@@ -642,7 +653,18 @@ const unwrapFeedItem = (item: any): any => {
   return item;
 };
 
-const safeArray = <T,>(v: any): T[] => (Array.isArray(v) ? v : []);
+const safeArray = <T,>(v: any): T[] => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string' && v.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 const safeNumber = (v: any, fallback = 0) => {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -963,12 +985,16 @@ const fmtCount = (n: number) => {
 const formatReactionText = (totalCount: number, reactorName: string): string => {
   if (totalCount === 0) return '';
   const formattedTotal = fmtCount(totalCount);
+  const cleanName = String(reactorName || '').trim();
+  if (!cleanName) {
+    return totalCount === 1 ? '1 Reaction' : `${formattedTotal} Reactions`;
+  }
   if (totalCount === 1) {
-    return `${formattedTotal} · ${reactorName}`;
+    return `${formattedTotal} · ${cleanName}`;
   }
   const othersCount = totalCount - 1;
   const formattedOthers = fmtCount(othersCount);
-  return `${formattedTotal} · ${reactorName} and ${formattedOthers} other${
+  return `${formattedTotal} · ${cleanName} and ${formattedOthers} other${
     othersCount !== 1 ? 's' : ''
   }`;
 };
@@ -6302,14 +6328,11 @@ export const Post = memo(
     const isGroupPost = !!(groupId || group || groupName);
 
     const myReaction = p.myReaction ?? p.my_reaction ?? null;
- const likesCount = Number(p.likesCount ?? p.reactionsCount ?? p.reactions_count ?? 0);
-      
+    const likesCount = Number(p.likesCount ?? p.reactionsCount ?? p.reactions_count ?? p.likes_count ?? p.likes ?? 0);
 
-    const reactionsArr: any[] = Array.isArray(p.reactions)
-      ? p.reactions
-      : Array.isArray(p.reactions_preview)
-      ? p.reactions_preview
-      : [];
+    const rawReactions = safeArray(p.reactions);
+    const rawPreview = safeArray(p.reactions_preview);
+    const reactionsArr: any[] = rawReactions.length > 0 ? rawReactions : rawPreview;
 
     const reactorNameFromApi = String(p.reactor_name ?? p.reactorName ?? '').trim();
 
@@ -6323,15 +6346,37 @@ export const Post = memo(
 
     const finalReactionCount = likesCount > 0 ? likesCount : reactionsArr.length;
 
-    const [commentCount, setCommentCount] = useState(() => {
-      if (typeof p.comments_count === 'number') return p.comments_count;
-      if (Array.isArray(p.comments)) return p.comments.length;
-      return 0;
-    });
-
-    const [shareCount, setShareCount] = useState(() =>
-      safeNumber(p.shares ?? p.shares_count, 0)
+    const initialCommentCount = safeNumber(
+      p.comments_count ??
+      p.comment_count ??
+      p.commentsCount ??
+      p.commentCount ??
+      (Array.isArray(p.comments) ? p.comments.length : 0),
+      0
     );
+    const [commentCount, setCommentCount] = useState(initialCommentCount);
+
+    useEffect(() => {
+      const nextCount = safeNumber(
+        p.comments_count ??
+        p.comment_count ??
+        p.commentsCount ??
+        p.commentCount ??
+        (Array.isArray(p.comments) ? p.comments.length : 0),
+        -1
+      );
+      if (nextCount >= 0) {
+        setCommentCount(nextCount);
+      }
+    }, [p.comments_count, p.comment_count, p.commentsCount, p.commentCount, p.comments]);
+
+    const initialShareCount = safeNumber(p.shares_count ?? p.shares ?? p.share_count ?? 0, 0);
+    const [shareCount, setShareCount] = useState(initialShareCount);
+
+    useEffect(() => {
+      const nextShares = safeNumber(p.shares_count ?? p.shares ?? p.share_count ?? 0, 0);
+      setShareCount(nextShares);
+    }, [p.shares_count, p.shares, p.share_count]);
 
     const createdAtLabel = formatRelativeTime(p.created_at);
     const postId = getFeedItemId(p);
@@ -6446,14 +6491,17 @@ export const Post = memo(
       if (!finalReactionCount) return '';
       if (reactionsArr.length) {
         const name = pickStableReactorName(postId, reactionsArr, users);
-        return String(name || '').trim();
+        if (name) return String(name).trim();
       }
       return reactorNameFromApi;
     }, [postId, finalReactionCount, reactionsArr, users, reactorNameFromApi]);
 
     const reactionText = useMemo(() => {
-      if (!finalReactionCount || !reactorName) return '';
-      return formatReactionText(finalReactionCount, reactorName);
+      if (!finalReactionCount) return '';
+      if (reactorName) {
+        return formatReactionText(finalReactionCount, reactorName);
+      }
+      return finalReactionCount === 1 ? '1 Reaction' : `${fmtCount(finalReactionCount)} Reactions`;
     }, [finalReactionCount, reactorName]);
 
     // Inside Post component, after all the useMemo declarations, before the return
@@ -10155,26 +10203,110 @@ export const Feed = memo(({
               is_verified: Boolean(reel?.verified),
             };
 
+          const matchingPost = (feedItemsProp || []).find((p: any) =>
+            (reel?.id != null && Number(p.id) === Number(reel.id)) ||
+            (p.video_url && (p.video_url === reel?.video_url || p.video_url === reel?.videoUrl))
+          );
+
+          const reelRawReactions =
+            (Array.isArray(reel?.reactions) && reel.reactions.length > 0 ? reel.reactions : null) ||
+            (Array.isArray(matchingPost?.reactions) && matchingPost.reactions.length > 0 ? matchingPost.reactions : null) ||
+            (Array.isArray(reel?.reactions_preview) && reel.reactions_preview.length > 0 ? reel.reactions_preview : null) ||
+            (Array.isArray(matchingPost?.reactions_preview) && matchingPost.reactions_preview.length > 0 ? matchingPost.reactions_preview : null) ||
+            [];
+
+          const reelReactionCount = safeNumber(
+            reel?.reactions_count ??
+            reel?.reactionsCount ??
+            matchingPost?.reactions_count ??
+            matchingPost?.reactionsCount ??
+            reel?.likes_count ??
+            reel?.likesCount ??
+            matchingPost?.likesCount ??
+            matchingPost?.likes_count ??
+            reel?.likes ??
+            reelRawReactions.length,
+            0
+          );
+
+          const reelCommentCount = safeNumber(
+            reel?.comments_count ??
+            reel?.comment_count ??
+            reel?.commentsCount ??
+            matchingPost?.comments_count ??
+            matchingPost?.comment_count ??
+            matchingPost?.commentsCount ??
+            (Array.isArray(reel?.comments) ? reel.comments.length : (Array.isArray(matchingPost?.comments) ? matchingPost.comments.length : 0)),
+            0
+          );
+
+          const reelShareCount = safeNumber(
+            reel?.shares_count ??
+            reel?.sharesCount ??
+            reel?.shares ??
+            matchingPost?.shares_count ??
+            matchingPost?.sharesCount ??
+            matchingPost?.shares ??
+            0,
+            0
+          );
+
+          const reelMyReaction =
+            reel?.my_reaction ||
+            reel?.myReaction ||
+            reel?.reaction ||
+            matchingPost?.my_reaction ||
+            matchingPost?.myReaction ||
+            (currentUser && reelRawReactions.length
+              ? reelRawReactions.find((r: any) => Number(r.user_id) === Number(currentUser.id))?.type
+              : null) ||
+            null;
+
+          const reelReactorName =
+            reel?.reactor_name ||
+            reel?.reactorName ||
+            matchingPost?.reactor_name ||
+            matchingPost?.reactorName ||
+            pickStableReactorName(reel?.id, reelRawReactions, users);
+
+          const reelReactionText = formatReactionText(reelReactionCount, reelReactorName);
+
+          const reelEmojiList =
+            reelRawReactions.length > 0
+              ? topReactionEmojis(reelRawReactions, 2)
+              : reelReactionCount > 0
+              ? ['👍']
+              : [];
+
           const reelAsPost: any = {
+            ...(matchingPost || {}),
+            ...reel,
             id: reel?.id,
             reel_id: reel?.id,
             user_id: authorId,
-            content: reel?.caption || reel?.content || '',
-            caption: reel?.caption || reel?.content || '',
-            video_url: reel?.video_url || reel?.videoUrl || reel?.video || '',
-            media_url: reel?.video_url || reel?.videoUrl || reel?.video || '',
-            thumbnail_url: reel?.thumbnail_url || reel?.thumbnail || reel?.cover_url || '',
+            content: reel?.caption || reel?.content || matchingPost?.content || '',
+            caption: reel?.caption || reel?.content || matchingPost?.content || '',
+            video_url: reel?.video_url || reel?.videoUrl || reel?.video || matchingPost?.video_url || '',
+            media_url: reel?.video_url || reel?.videoUrl || reel?.video || matchingPost?.video_url || '',
+            thumbnail_url: reel?.thumbnail_url || reel?.thumbnail || reel?.cover_url || matchingPost?.thumbnail_url || '',
             media_type: 'video',
             type: 'video',
-            shares: reel?.shares || 0,
-            views: reel?.views || 0,
-            likes_count: reel?.likes_count || reel?.likes || 0,
-            likesCount: reel?.likes_count || reel?.likes || 0,
-            reactions_count: reel?.reactions_count || reel?.likes_count || reel?.likes || 0,
-            reactions: reel?.reactions || {},
-            comments: reel?.comments || [],
+            shares: reelShareCount,
+            shares_count: reelShareCount,
+            views: safeNumber(reel?.views ?? matchingPost?.views, 0),
+            likes_count: reelReactionCount,
+            likesCount: reelReactionCount,
+            reactions_count: reelReactionCount,
+            reactions: reelRawReactions,
+            reactions_preview: reelRawReactions,
+            reactor_name: reelReactorName,
+            comments_count: reelCommentCount,
+            comment_count: reelCommentCount,
+            comments: Array.isArray(reel?.comments) ? reel.comments : (Array.isArray(matchingPost?.comments) ? matchingPost.comments : []),
+            my_reaction: reelMyReaction,
+            myReaction: reelMyReaction,
             visibility: 'public',
-            created_at: reel?.created_at || item.created_at || new Date().toISOString(),
+            created_at: reel?.created_at || item.created_at || matchingPost?.created_at || new Date().toISOString(),
             user: authorObj,
             author: authorObj,
           };
@@ -10190,10 +10322,12 @@ export const Feed = memo(({
                 users={users}
                 stories={stories}
                 autoplay={false}
-                reactionCount={safeNumber(reelAsPost.reactions_count ?? reelAsPost.likes_count, 0)}
-                myReaction={reelAsPost.my_reaction || reelAsPost.reaction || null}
-                commentCount={safeNumber(reelAsPost.comments_count ?? reelAsPost.comment_count, 0)}
-                shareCount={safeNumber(reelAsPost.shares_count ?? reelAsPost.shares, 0)}
+                reactionCount={reelReactionCount}
+                myReaction={reelMyReaction}
+                commentCount={reelCommentCount}
+                shareCount={reelShareCount}
+                emojiList={reelEmojiList}
+                reactionText={reelReactionText}
                 onProfileClick={(userId) => onProfileClick?.(Number(userId))}
                 onReact={(p, rType) => onReact?.(p, rType)}
                 onShare={(postId, newCount) => onShare?.(postId, newCount)}
@@ -10208,6 +10342,7 @@ export const Feed = memo(({
                 onFollow={() => onFollow?.(authorId)}
                 onHashtagClick={onHashtagClick}
                 onOpenComments={() => onOpenComments?.(reelAsPost)}
+                onCommentAdded={() => {}}
               />
             </article>
           );

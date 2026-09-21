@@ -242,7 +242,7 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
   }, [propMyReaction, activePost?.my_reaction, activePost?.myReaction, activePost?.reaction]);
 
   useEffect(() => {
-    if (typeof propReactionCount === 'number') {
+    if (typeof propReactionCount === 'number' && (propReactionCount > 0 || !reactionCount)) {
       setReactionCount(propReactionCount);
     } else {
       const count = Number(
@@ -253,7 +253,9 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
         activePost?.likes_count ??
         (Array.isArray(activePost?.reactions) ? activePost.reactions.length : (Array.isArray(activePost?.reactions_preview) ? activePost.reactions_preview.length : 0))
       );
-      setReactionCount(count);
+      if (count > 0 || !reactionCount) {
+        setReactionCount(count);
+      }
     }
   }, [
     propReactionCount,
@@ -286,26 +288,30 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
   // Sync shares and comments count if props or activePost updates
   useEffect(() => {
-    if (typeof propShareCount === 'number') {
+    if (typeof propShareCount === 'number' && (propShareCount > 0 || !sharesCount)) {
       setSharesCount(propShareCount);
     } else if (activePost?.sharesCount !== undefined || activePost?.shareCount !== undefined || activePost?.shares !== undefined || activePost?.shares_count !== undefined) {
-      setSharesCount(Number(activePost?.sharesCount ?? activePost?.shareCount ?? activePost?.shares ?? activePost?.shares_count ?? 0));
+      const count = Number(activePost?.sharesCount ?? activePost?.shareCount ?? activePost?.shares ?? activePost?.shares_count ?? 0);
+      if (count > 0 || !sharesCount) {
+        setSharesCount(count);
+      }
     }
   }, [propShareCount, activePost?.sharesCount, activePost?.shareCount, activePost?.shares, activePost?.shares_count]);
 
   useEffect(() => {
-    if (typeof propCommentCount === 'number') {
+    if (typeof propCommentCount === 'number' && (propCommentCount > 0 || !commentsCount)) {
       setCommentsCount(propCommentCount);
     } else if (activePost?.commentsCount !== undefined || activePost?.commentCount !== undefined || activePost?.comments_count !== undefined || activePost?.comment_count !== undefined || activePost?.comments !== undefined) {
-      setCommentsCount(
-        Number(
-          activePost?.commentsCount ??
-          activePost?.commentCount ??
-          activePost?.comments_count ??
-          activePost?.comment_count ??
-          (Array.isArray(activePost?.comments) ? activePost.comments.length : 0)
-        )
+      const count = Number(
+        activePost?.commentsCount ??
+        activePost?.commentCount ??
+        activePost?.comments_count ??
+        activePost?.comment_count ??
+        (Array.isArray(activePost?.comments) ? activePost.comments.length : 0)
       );
+      if (count > 0 || !commentsCount) {
+        setCommentsCount(count);
+      }
     }
   }, [
     propCommentCount,
@@ -316,6 +322,22 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
     activePost?.comments,
   ]);
 
+  // Background comment count fetch if commentsCount is zero
+  useEffect(() => {
+    if (activePostId && commentsCount === 0) {
+      const viewerId = currentUser?.id || 0;
+      apiFetch(`/api/posts/${activePostId}/comments?viewerId=${viewerId}`)
+        .then((data) => {
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.comments) ? data.comments : []);
+          if (list.length > 0) {
+            setComments(list);
+            setCommentsCount((prev) => Math.max(prev, list.length));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [activePostId]);
+
   // Normal Post Reactions endpoint: GET /api/posts/:id/reactions
   const fetchReactions = useCallback(async () => {
     if (!activePostId) return;
@@ -323,8 +345,10 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
       const viewerId = currentUser?.id || 0;
       const res = await apiFetch(`/api/posts/${activePostId}/reactions?viewerId=${viewerId}&limit=100`);
       if (res && (res.success || Array.isArray(res.reactions))) {
-        if (typeof res.reactions_count === 'number' && res.reactions_count > 1) {
-          setReactionCount((prev) => Math.max(prev, res.reactions_count));
+        if (typeof res.reactions_count === 'number' && res.reactions_count >= 0) {
+          setReactionCount(res.reactions_count);
+        } else if (Array.isArray(res.reactions)) {
+          setReactionCount((prev) => Math.max(prev, res.reactions.length));
         }
         if (Array.isArray(res.reactions) && res.reactions.length > 0) {
           setServerReactions(res.reactions);
@@ -361,8 +385,9 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
   const emojiList = useMemo(() => {
     if (propEmojiList && propEmojiList.length > 0) return propEmojiList;
-    return topReactionEmojis(combinedReactions, 3);
-  }, [combinedReactions, propEmojiList]);
+    const em = topReactionEmojis(combinedReactions, 3);
+    return em.length > 0 ? em : (reactionCount > 0 ? ['👍'] : []);
+  }, [combinedReactions, propEmojiList, reactionCount]);
 
   const reactorName = useMemo(() => {
     return (
@@ -374,7 +399,11 @@ export const InstagramVideoCard: React.FC<InstagramVideoCardProps> = ({
 
   const reactionText = useMemo(() => {
     if (propReactionText) return propReactionText;
-    return formatReactionText(reactionCount, reactorName);
+    if (reactionCount <= 0) return '';
+    if (reactorName) {
+      return formatReactionText(reactionCount, reactorName);
+    }
+    return reactionCount === 1 ? '1 Reaction' : `${formatCount(reactionCount)} Reactions`;
   }, [reactionCount, reactorName, propReactionText]);
 
   // Discuss modal & comments state

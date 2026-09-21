@@ -296,7 +296,18 @@ type GroupSuggestion = {
 };
 
 /** ---------- Safety helpers ---------- */
-const safeArray = <T = any,>(v: any): T[] => (Array.isArray(v) ? v : []);
+const safeArray = <T = any,>(v: any): T[] => {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string' && v.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 const safeNumber = (v: any, fallback = 0) => {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -1050,9 +1061,10 @@ const normalizePost = (p: any): PostType => {
     
     my_reaction: p?.my_reaction ?? p?.myReaction ?? null,
     myReaction: p?.myReaction ?? p?.my_reaction ?? null,
-    reactions_count: safeNumber(p?.reactions_count ?? p?.reactionsCount ?? p?.likesCount ?? 0),
-    reactionsCount: safeNumber(p?.reactionsCount ?? p?.reactions_count ?? p?.likesCount ?? 0),
-    likesCount: safeNumber(p?.likesCount ?? p?.reactions_count ?? p?.reactionsCount ?? 0),
+    reactions_count: safeNumber(p?.reactions_count ?? p?.reactionsCount ?? p?.likesCount ?? p?.likes_count ?? p?.likes ?? 0),
+    reactionsCount: safeNumber(p?.reactionsCount ?? p?.reactions_count ?? p?.likesCount ?? p?.likes_count ?? p?.likes ?? 0),
+    likesCount: safeNumber(p?.likesCount ?? p?.likes_count ?? p?.reactions_count ?? p?.reactionsCount ?? p?.likes ?? 0),
+    likes_count: safeNumber(p?.likes_count ?? p?.likesCount ?? p?.reactions_count ?? p?.reactionsCount ?? p?.likes ?? 0),
 
     reactor_name: p?.reactor_name ?? p?.reactorName ?? '',
     reactions_preview: safeArray(p?.reactions_preview),
@@ -1367,17 +1379,26 @@ const normalizeReel = (r: any): Reel => {
     visibility: safeString(r?.visibility ?? 'public'),
     location: safeString(r?.location ?? ''),
     views: safeNumber(r?.views ?? r?.views_count ?? 0),
-    shares: safeNumber(r?.shares ?? 0),
+    shares: safeNumber(r?.shares ?? r?.shares_count ?? 0),
+    shares_count: safeNumber(r?.shares_count ?? r?.shares ?? 0),
     songId: r?.song_id ?? r?.songId ?? null,
     soundKey,
     sound_key: soundKey,
     reactions: safeArray(r?.reactions),
+    reactions_preview: safeArray(r?.reactions_preview),
     comments,
     created_at: r?.created_at ?? r?.createdAt ?? new Date().toISOString(),
     thumbnail_url: safeString(r?.thumbnail_url ?? r?.cover_url ?? ''),
     thumbnail: safeString(r?.thumbnail_url ?? r?.cover_url ?? ''),
-    reactions_count: safeNumber(r?.reactions_count ?? safeArray(r?.reactions).length),
-    comments_count: safeNumber(r?.comments_count ?? comments.length),
+    reactions_count: safeNumber(r?.reactions_count ?? r?.reactionsCount ?? r?.likes_count ?? r?.likesCount ?? safeArray(r?.reactions).length),
+    reactionsCount: safeNumber(r?.reactions_count ?? r?.reactionsCount ?? r?.likes_count ?? r?.likesCount ?? safeArray(r?.reactions).length),
+    likes_count: safeNumber(r?.likes_count ?? r?.likesCount ?? r?.reactions_count ?? safeArray(r?.reactions).length),
+    likesCount: safeNumber(r?.likes_count ?? r?.likesCount ?? r?.reactions_count ?? safeArray(r?.reactions).length),
+    comments_count: safeNumber(r?.comments_count ?? r?.comment_count ?? comments.length),
+    comment_count: safeNumber(r?.comments_count ?? r?.comment_count ?? comments.length),
+    my_reaction: r?.my_reaction ?? r?.myReaction ?? null,
+    myReaction: r?.my_reaction ?? r?.myReaction ?? null,
+    reactor_name: r?.reactor_name ?? r?.reactorName ?? '',
     author: r?.author || r?.author_name || '',
     author_name: r?.author_name || r?.author || '',
     avatar: r?.avatar || r?.avatar_url || r?.author_image || '',
@@ -6052,6 +6073,29 @@ const navigateTo = useCallback((target: View) => {
           );
           if (!alreadyExists) {
             const author = users.find((u) => Number(u.id) === Number(post.user_id)) || post.user || post.author;
+            const reelCommentsCount = safeNumber(
+              post.comments_count ??
+              post.comment_count ??
+              post.commentsCount ??
+              (Array.isArray(post.comments) ? post.comments.length : 0),
+              0
+            );
+            const reelSharesCount = safeNumber(
+              post.shares_count ??
+              post.shares ??
+              post.sharesCount ??
+              0,
+              0
+            );
+            const reelReactionCount = safeNumber(
+              post.reactions_count ??
+              post.reactionsCount ??
+              post.likesCount ??
+              post.likes_count ??
+              (Array.isArray(post.reactions) ? post.reactions.length : (Array.isArray(post.reactions_preview) ? post.reactions_preview.length : 0)),
+              0
+            );
+
             normalizedReels.push({
               id: Number(post.id) || Date.now(),
               userId: Number(post.user_id) || 0,
@@ -6068,8 +6112,22 @@ const navigateTo = useCallback((target: View) => {
               thumbnail_url: post.thumb_url || rawMedia[0]?.thumb || '',
               caption: post.content || '',
               content: post.content || '',
-              likes_count: post.likesCount || post.reactions_count || 0,
-              likesCount: post.likesCount || post.reactions_count || 0,
+              likes_count: reelReactionCount,
+              likesCount: reelReactionCount,
+              reactions_count: reelReactionCount,
+              reactionsCount: reelReactionCount,
+              comments_count: reelCommentsCount,
+              comment_count: reelCommentsCount,
+              commentsCount: reelCommentsCount,
+              comments: Array.isArray(post.comments) ? post.comments : [],
+              shares_count: reelSharesCount,
+              shares: reelSharesCount,
+              sharesCount: reelSharesCount,
+              reactions: Array.isArray(post.reactions) ? post.reactions : [],
+              reactions_preview: Array.isArray(post.reactions_preview) ? post.reactions_preview : [],
+              reactor_name: post.reactor_name || post.reactorName || '',
+              my_reaction: post.my_reaction || post.myReaction || null,
+              myReaction: post.my_reaction || post.myReaction || null,
               views: post.views || 0,
               created_at: post.created_at || new Date().toISOString(),
               source: 'post',
